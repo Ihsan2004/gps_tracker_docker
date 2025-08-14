@@ -1,0 +1,762 @@
+swagger: "2.0"
+info:
+  description: "This API is GPS tracker API with Swagger integration."
+  title: "GpsTracker"
+  contact:
+    name: "Ihsan"
+    email: "faikihsan17@gmail.com"
+  version: "1.0"
+host: "localhost:3000"
+basePath: "/"
+schemes:
+  - http
+
+paths:
+  /v1/login:
+    post:
+      summary: User Login
+      description: Authenticates a user and returns a JWT token.
+      tags:
+        - User endpoints
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: credentials
+          description: User login credentials
+          required: true
+          schema:
+            type: object
+            properties:
+              email:
+                type: string
+                example: "faikihsan17@gmail.com"
+              password:
+                type: string
+                example: "bogazici1863"
+      responses:
+        '200':
+          description: JWT token returned successfully.
+          schema:
+            type: object
+            properties:
+              token:
+                type: string
+                description: JWT Bearer Token
+                example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '400':
+          description: Invalid credentials supplied.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Invalid username or password."
+
+  /v1/users/{user_id}:
+    get:
+      security:
+        - bearerAuth : []
+      tags:
+        - User endpoints
+      summary: Getting a user with id
+      description: This endpoint retrieves a user by ID.
+      parameters:
+        - in: path
+          name: user_id
+          schema:
+            type: integer
+          required: true
+          description: id for user
+
+        - in: header
+          name: authorization
+          type: string
+          required: true
+          description: Bearer token
+
+
+      responses:
+        '200':
+          description: Successful operation
+          schema:
+              type: object
+              properties:
+                user_id:
+                    type: integer
+                    format: int64
+                user_name:
+                    type: string
+                email:
+                    type: string
+                phone_number:
+                    type: string
+                password:
+                    type: string
+                role_id:
+                    type: string
+                
+        '404':
+          description: User not found
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "User not found"
+        '401':
+          description: Unauthorized
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Access token is missing or invalid"
+
+    delete:
+      summary: Deleting an existing user
+      security:
+        - Bearer auth: [ ]
+      description: Deleting a user from db with id .
+      tags:
+        - User endpoints
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          description: user_id for deleting a user
+          type: integer
+
+        - in: header
+          name: authorization
+          required: true
+          description: JWT token for authorization
+          type: string
+
+      responses:
+        '200' :
+          description: Deletion is successful
+          schema:
+            type: object
+
+
+        '404':
+          description: User not found
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "User not found"
+        '401':
+          description: Unauthorized
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Access token is missing or invalid"
+
+    put:
+      summary: Editing a user
+      security:
+        - Bearer auth: [ ]
+      description: Editing a user with necessary information
+      tags:
+        - User endpoints
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: user
+          description: information of user
+          schema:
+            properties:
+              name:
+                type: string
+                example: 'Alex'
+              email:
+                type: string
+                example: 'fenerbahce@mail.com'
+              phone_number:
+                type: string
+                example: '5555555555'
+              password:
+                type: string
+                example: 'abcd123!.'
+
+        - in: header
+          name: authorization
+          type: string
+          description: token
+
+        - in: path
+          name: user_id
+          type: integer
+          required: true
+          description: user_id for editing a user
+
+      responses:
+        '200':
+          description: 'User updated successfully'
+        '201':
+          description: 'User updated successfully.'
+        '400':
+          description: 'Invalid request body'
+        '404':
+          description: User not found
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "User not found"
+
+  /v1/users?page=&limit= :
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - User endpoints
+      summary: Getting all users
+      description: This endpoint retrieves a user by ID.
+      parameters:
+        - in: header
+          name: authorization
+          type: string
+          required: true
+          description: Bearer token
+        - in: query
+          name: page
+          type: integer
+          required: false
+          default: 1
+          description: page of the users
+        - in: query
+          name: limit
+          type: integer
+          required: false
+          default: 2
+          description: number of user that one page include
+
+      responses:
+        '200':
+          description: A list of users
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/User'
+
+        '404':
+          description: There exists no user
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "There is no user"
+        '401':
+          description: Unauthorized
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Access token is missing or invalid"
+
+  /v1/users/devices/{user_id}?page=&limit= :
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - User endpoints
+      summary: Getting devices of a specific user
+      description: This endpoint retrieves devices of user by id .
+      parameters:
+        - in: path
+          name: user_id
+          type: integer
+          required: true
+          description: id of user
+        - in: header
+          name: authorization
+          type: string
+          required: true
+          description: Bearer token
+        - in: query
+          name: page
+          type: integer
+          required: false
+          default: 1
+          description: page of the users
+        - in: query
+          name: limit
+          type: integer
+          required: false
+          default: 2
+          description: number of device that one page include
+
+      responses:
+        '200':
+          description: A list of devices of specific user
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Device'
+
+        '404':
+          description: There exists no device for this user
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "There is no device"
+        '401':
+          description: Unauthorized
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Access token is missing or invalid"
+
+  /v1/users:
+    post:
+      summary: Adding new user
+      security:
+        - Bearer auth : []
+      description: Adding a new user with necessary information
+      tags:
+        - User endpoints
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: user
+          description: information of user
+          schema:
+            properties:
+              name:
+                type: string
+                example: 'Alex'
+              email:
+                type: string
+                example: 'fenerbahce@mail.com'
+              phone_number:
+                type: string
+                example: '5555555555'
+              password:
+                type : string
+                example: 'abcd123!.'
+
+        - in: header
+          name: authorization
+          type: string
+          description: token®
+
+      responses:
+        '201':
+          description: 'User created successfully.'
+        '400':
+          description: 'Invalid request body'
+
+  /v1/devices?page=&limit= :
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - Device endpoints
+      summary: Getting whole devices
+      description: This endpoint retrieves devices of all users .
+      parameters:
+        - in: header
+          name: authorization
+          type: string
+          required: true
+          description: Bearer token
+        - in: query
+          name: page
+          type: integer
+          required: false
+          default: 1
+          description: page of the users
+        - in: query
+          name: limit
+          type: integer
+          required: false
+          default: 2
+          description: number of device that one page include
+
+      responses:
+        '200':
+          description: A list of devices of specific user
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Device'
+
+        '404':
+          description: There exists no device
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "There is no device"
+        '401':
+          description: Unauthorized
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Access token is missing or invalid"
+
+  /v1/devices/{device_id} :
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - Device endpoints
+      summary: Getting a device
+      description: This endpoint retrieves a device with id .
+      parameters:
+        - in: header
+          name: authorization
+          type: string
+          required: true
+          description: Bearer token
+
+        - in : path
+          name : device_id
+          type: integer
+          required: true
+          description: id of device
+
+      responses:
+        '200':
+          description: A device with id
+          schema:
+            type: object
+            items:
+              $ref: '#/definitions/Device'
+
+
+        '404':
+          description: There exists no device
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "There is no device with this id"
+        '401':
+          description: Unauthorized
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Access token is missing or invalid"
+
+
+    delete:
+      summary: Deleting an existing device
+      security:
+        - Bearer auth: [ ]
+      description: Deleting a device from db with id if it has not location history .
+      tags:
+        - Device endpoints
+      parameters:
+        - in: path
+          name: device_id
+          required: true
+          description: device_id for deleting a user
+          type: integer
+
+        - in: header
+          name: authorization
+          required: true
+          description: JWT token for authorization
+          type: string
+
+      responses:
+        '201':
+          description: Deletion is successful
+          schema:
+            type: object
+            properties:
+              device_id:
+                type: integer
+
+        '404':
+          description: User not found
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "User not found"
+        '401':
+          description: Unauthorized
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Access token is missing or invalid"
+
+    put:
+      summary: Editing a device
+      security:
+        - Bearer auth: [ ]
+      description: Editing a device with necessary information
+      tags:
+        - Device endpoints
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: device
+          description: information of user
+          schema:
+            properties:
+              model:
+                type: string
+                example: 'apple'
+              brand:
+                type: string
+                example: 'iphone 16 pro'
+
+        - in: header
+          name: authorization
+          type: string
+          description: token
+
+        - in: path
+          name: device_id
+          type: integer
+          required: true
+          description: user_id for editing a user
+
+      responses:
+        '200':
+          description: 'User updated successfully'
+        '201':
+          description: 'User updated successfully.'
+        '400':
+          description: 'Invalid request body'
+        '404':
+          description: User not found
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "User not found"
+
+  /v1/devices/{userid}:
+    post:
+      summary: Adding new user
+      security:
+        - Bearer auth: [ ]
+      description: Adding a new device with user id
+      tags:
+        - Device endpoints
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name : userid
+          type: integer
+          required: true
+
+        - in: body
+          name: device
+          description: information of user
+          schema:
+            $ref: '#/definitions/Device'
+
+        - in: header
+          name: authorization
+          type: string
+          description: token®
+
+      responses:
+        '201':
+          description: 'Device created successfully.'
+        '400':
+          description: 'Invalid request body.'
+        '404':
+          description: 'User not found.'
+
+  /v1/locationHistory/{deviceid}?page=&limit= :
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - Location endpoints
+      summary: Getting a location history with id
+      description: This endpoint retrieves a location by ID.
+      parameters:
+        - in: path
+          name: deviceid
+          type: integer
+          required: true
+          description: id for device
+
+        - in: header
+          name: authorization
+          type: string
+          required: true
+          description: Bearer token
+
+
+      responses:
+        '200':
+          description: Successful operation
+          schema:
+            type: object
+            items:
+              $ref : '#/definitions/Location'
+
+        '404':
+          description: Location not found
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "User not found"
+        '401':
+          description: Unauthorized
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Access token is missing or invalid"
+
+    post:
+      summary: Adding new location
+      security:
+        - Bearer auth: [ ]
+      description: Adding a new location with necessary information
+      tags:
+        - Location endpoints
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: location
+          description: information of location
+          schema:
+            $ref : '#/definitions/Location'
+
+        - in: path
+          name: deviceid
+          description: device id
+          type: integer
+
+
+        - in: header
+          name: authorization
+          type: string
+          description: token®
+
+      responses:
+        '201':
+          description: 'Location created successfully.'
+        '400':
+          description: 'Invalid request body'
+
+    delete:
+      summary: Deleting a device's location history
+      security:
+        - Bearer auth: [ ]
+      description: Deleting a user from db with id .
+      tags:
+        - Location endpoints
+      parameters:
+        - in: path
+          name: deviceid
+          required: true
+          description: device id for deleting a device's location
+          type: integer
+
+        - in: header
+          name: authorization
+          required: true
+          description: JWT token for authorization
+          type: string
+
+      responses:
+        '201':
+          description: Deletion is successful
+          schema:
+            type: object
+            properties:
+              user_id:
+                type: integer
+
+        '404':
+          description: Device not found
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Device not found"
+        '401':
+          description: Unauthorized
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Access token is missing or invalid"
+
+
+definitions:
+  User:
+    type: object
+    properties:
+      id:
+        type: integer
+        example: 1
+      email:
+        type: string
+        example: 'faikihsan17@gmail.com'
+
+  Device:
+    type: object
+    properties:
+      model:
+        type: string
+        example: 'apple'
+      brand:
+        type: string
+        example: 'ipad air'
+
+  Location:
+    type: object
+    properties:
+      latitude:
+        type: float
+        example: '40.12'
+      longitude:
+        type: float
+        example: '41.56'
