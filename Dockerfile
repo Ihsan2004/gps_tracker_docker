@@ -8,16 +8,15 @@ RUN apk add --no-cache git gcc musl-dev
 WORKDIR /app
 
 # Go mod dosyalarını kopyala (caching için)
-COPY app/go.mod app/go.sum ./
+COPY go.mod go.sum ./
 
 # Bağımlılıkları indir
 RUN go mod download
 
 # Tüm kaynak kodunu kopyala
-COPY app/ .
-
+COPY . .
 # Uygulamayı build et
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o gps_tracker_docker ./main.go
+RUN CGO_ENABLED=1 GOOS=linux go build -o gps_tracker_docker ./main.go
 
 # Production stage
 FROM alpine:latest
@@ -29,8 +28,7 @@ RUN apk --no-cache add ca-certificates tzdata curl
 WORKDIR /app
 
 # Binary'yi kopyala
-COPY --from=builder /app/gps-tracker .
-
+COPY --from=builder /app/gps_tracker_docker .
 # Docs klasörünü kopyala (Swagger için)
 COPY --from=builder /app/docs ./docs
 
@@ -42,4 +40,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:3000/ || exit 1
 
 # Uygulamayı çalıştır
-CMD ["./gps-tracker"]
+CMD ["./gps_tracker_docker"]

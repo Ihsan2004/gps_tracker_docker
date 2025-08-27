@@ -4,24 +4,21 @@ services:
   rabbitmq:
     image: rabbitmq:3.13-management
     container_name: gps_rabbitmq
-    environment:
-      -RABBITMQ_DEFAULT_USER=gps
-      -RABBITMQ_DEFAULT_PASS=gps_pass
     ports:
       - "5672:5672"
       - "15672:15672"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
+    environment:
+      - RABBITMQ_DEFAULT_USER=gps
+      - RABBITMQ_DEFAULT_PASS=gps_pass
     networks:
       - gps_network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pgps_tracker_pass"]
+      test: ["CMD", "rabbitmq-diagnostics","ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
+
 
   # MySQL Database
   mysql:
@@ -121,6 +118,7 @@ services:
     environment:
       - APP_PORT=3000
       - GIN_MODE=release
+      - RABBITMQ_URL=amqp://gps:gps_pass@rabbitmq:5672
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - ELASTICSEARCH_URL=http://elasticsearch:9200
@@ -141,6 +139,8 @@ services:
       mongo:
         condition: service_healthy
       mysql:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     restart: unless-stopped
 
