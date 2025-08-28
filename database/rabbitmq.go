@@ -28,7 +28,7 @@ func initRabbitMQ() error {
 
 	rabbitMQURL := os.Getenv("RABBITMQ_URL")
 	if rabbitMQURL == "" {
-		rabbitMQURL = "amqp://appuser:appsecret@rabbitmq:5672/"
+		rabbitMQURL = "amqp://gps:gps_pass@rabbitmq:5672/"
 	}
 
 	rabbitConn, err = amqp.Dial(rabbitMQURL)
