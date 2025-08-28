@@ -1,42 +1,27 @@
-services:
+# Bu dosya, yerel ve AWS EC2 ortamlarında çalışacak şekilde
+# servislerin doğru şekilde yapılandırılmasını sağlar.
 
-  # rabbitmq
-  rabbitmq:
-    image: rabbitmq:3.13-management
-    container_name: gps_rabbitmq
-    environment:
-      -RABBITMQ_DEFAULT_USER=gps
-      -RABBITMQ_DEFAULT_PASS=gps_pass
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
-    networks:
-      - gps_network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pgps_tracker_pass"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+# Docker Compose versiyonu
+version: '3.8'
+
+# Servisler
+services:
 
   # MySQL Database
   mysql:
     image: mysql:8.0
     container_name: gps_mysql
     environment:
-      MYSQL_ROOT_PASSWORD: gps_tracker_pass
+      # AWS öncesi dosyadaki kullanıcı ve şifreler
+      MYSQL_ROOT_PASSWORD: eeibs1904
       MYSQL_DATABASE: gps_tracker
       MYSQL_USER: gps_user
       MYSQL_PASSWORD: gps_user_pass
-    ports:
-      - "3307:3306"
+    # Portları lokalde bağlamaktan kaçınıldı, EC2'de gerek yok.
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
+      # İsteğe bağlı olarak ilk çalıştırma scriptleri için
+      # - ./mysql-init:/docker-entrypoint-initdb.d
     networks:
       - gps_network
     restart: unless-stopped
@@ -45,21 +30,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 60s # Başlangıç süresi uzatıldı
 
   # MongoDB Database
   mongo:
     image: mongo:7.0
     container_name: gps_mongo
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin_pass
       MONGO_INITDB_DATABASE: trackingDB
-    ports:
-      - "27017:27017"
     volumes:
       - mongo_data:/data/db
-      - ./mongo-init:/docker-entrypoint-initdb.d
     networks:
       - gps_network
     restart: unless-stopped
@@ -70,6 +50,39 @@ services:
       retries: 5
       start_period: 30s
 
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: gps_redis
+    command: redis-server --appendonly yes --requirepass gps_redis_pass # AWS dosyasındaki şifre kullanıldı
+    volumes:
+      - redis_data:/data
+    networks:
+      - gps_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "gps_redis_pass", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: gps_rabbitmq
+    environment:
+      # AWS öncesi dosyadaki kullanıcı ve şifreler
+      RABBITMQ_DEFAULT_USER: gps
+      RABBITMQ_DEFAULT_PASS: gps_pass
+    networks:
+      - gps_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics","check_port_connectivity"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
   # Elasticsearch
   elasticsearch:
     image: elasticsearch:8.11.0
@@ -77,9 +90,7 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ports:
-      - "9200:9200"
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     networks:
@@ -87,30 +98,12 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 5
+      retries: 20
       start_period: 60s
 
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: gps_redis
-    command: redis-server --appendonly yes
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - gps_network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-  # GPS Tracker Go Uygulaması
+  # GPS Tracker Go Uygulaması (API)
   gps-app:
     build:
       context: .
@@ -121,41 +114,44 @@ services:
     environment:
       - APP_PORT=3000
       - GIN_MODE=release
+      # Servislerin doğru adresleri ve credentials bilgileri
+      - RABBITMQ_URL=amqp://gps:gps_pass@rabbitmq:5672
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_PASSWORD=gps_redis_pass
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       - MONGODB_URI=mongodb://mongo:27017
       - MONGODB_DATABASE=trackingDB
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
+      # Önceki hataları çözmek için doğru MySQL kullanıcı adı ve şifresi
       - MYSQL_DATABASE=gps_tracker
-      - MYSQL_USER=root
-      - MYSQL_PASSWORD=gps_tracker_pass
+      - MYSQL_USER=gps_user
+      - MYSQL_PASSWORD=gps_user_pass
     networks:
       - gps_network
     depends_on:
-      redis:
+      mysql:
         condition: service_healthy
-      elasticsearch:
+      redis:
         condition: service_healthy
       mongo:
         condition: service_healthy
-      mysql:
+      rabbitmq:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
     restart: unless-stopped
 
 # Persistent volumes
 volumes:
   redis_data:
-    driver: local
   elasticsearch_data:
-    driver: local
   mongo_data:
-    driver: local
   mysql_data:
-    driver: local
 
-# Custom network
+# Özel network tanımı
 networks:
   gps_network:
     driver: bridge
+
