@@ -5,15 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
+	"time"
+
 	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/bson"
-	"log"
-	"time"
 )
 
 const (
-	rabbitMQURL = "amqp://guest:guest@localhost:5672/"
-	queueName   = "location_history"
+	queueName = "location_history"
 )
 
 var (
@@ -24,6 +25,12 @@ var (
 // initRabbitMQ initializes the RabbitMQ connection and channel
 func initRabbitMQ() error {
 	var err error
+
+	rabbitMQURL := os.Getenv("RABBITMQ_URL")
+	if rabbitMQURL == "" {
+		rabbitMQURL = "amqp://gps:gps_pass@rabbitmq:5672/"
+	}
+
 	rabbitConn, err = amqp.Dial(rabbitMQURL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to RabbitMQ: %w", err)
@@ -147,14 +154,4 @@ func processMessage() {
 func StartConsumer() {
 	ConnectMongo()
 	processMessage()
-}
-
-// CloseConnections closes RabbitMQ connections
-func CloseConnections() {
-	if rabbitChan != nil {
-		rabbitChan.Close()
-	}
-	if rabbitConn != nil {
-		rabbitConn.Close()
-	}
 }

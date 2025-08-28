@@ -15,7 +15,7 @@ func main() {
 
 	log.Println("Starting GpsTracker2...")
 
-	//database.InitRedis()
+	database.InitRedis()
 	database.ConnectMongo()
 	database.ConnectMysql()
 	database.ConnectElastic()
