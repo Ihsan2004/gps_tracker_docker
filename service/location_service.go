@@ -8,11 +8,6 @@ import (
 	"errors"
 )
 
-// Marshal model location
-func MarshalLocation(location models.Location) ([]byte, error) {
-	return json.Marshal(&location)
-}
-
 // Create Location History
 func CreateLocationHistory(deviceID int, location models.Location) error {
 	//  Ensure device exists before sending to queue
