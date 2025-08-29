@@ -54,7 +54,7 @@ func ConnectMongo() *mongo.Client {
 		log.Printf("MongoDB connection attempt %d failed: %v", i+1, err)
 		time.Sleep(time.Duration(i+1) * 2 * time.Second)
 	}
-
+	""
 	if err != nil {
 		log.Fatal("MongoDB connection failed after retries:", err)
 	}
